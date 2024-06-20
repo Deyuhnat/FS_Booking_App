@@ -9,9 +9,9 @@ export default function RegisterPage() {
   function registerUser(ev) {
     ev.preventDefault(); //Not reload the page
     axios.post("/register", {
-        name, 
-        email,
-        password, 
+      name,
+      email,
+      password,
     });
   }
   return (
