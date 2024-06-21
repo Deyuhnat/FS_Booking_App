@@ -5,14 +5,15 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("./models/User");
 require("dotenv").config({ path: "./env" });
+const cookieParser = require("cookie-parser");
 
 const app = express();
-
-app.use(express.json());
 
 const bcryptSalt = bcrypt.genSaltSync(10);
 const jwtSecret = "fasefraw4rlco2odd38dsxsj1";
 
+app.use(express.json());
+app.use(cookieParser());
 app.use(
   cors({
     credentials: true,
@@ -60,7 +61,20 @@ app.post("/login", async (req, res) => {
     }
   } else {
     res.json("not found");
-  }                       
+  }
+});
+
+app.get("/profile", (req, res) => {
+  const { token } = req.cookies;
+  if (token) {
+    jwt.verify(token, jwtSecret, {}, async (err, userData) => {
+      if (err) throw err;
+      const { name, email, _id } = await User.findById(userData.id);
+      res.json({ name, email, _id });
+    });
+  } else {
+    res.json(null);
+  }
 });
 
 app.listen(4000);
