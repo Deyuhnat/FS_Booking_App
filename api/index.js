@@ -4,17 +4,21 @@ const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("./models/User");
-const imageDownloader = require("images-downloader");
+const imageDownloader = require("image-downloader");
 require("dotenv").config({ path: "./env" });
 const cookieParser = require("cookie-parser");
+const multer = require("multer");
+const fs = require("fs");
 
 const app = express();
 
 const bcryptSalt = bcrypt.genSaltSync(10);
 const jwtSecret = "fasefraw4rlco2odd38dsxsj1";
+const path = require("path");
 
 app.use(express.json());
 app.use(cookieParser());
+app.use("/uploads", express.static(__dirname + "/uploads"));
 app.use(
   cors({
     credentials: true,
@@ -82,16 +86,55 @@ app.post("/logout", (req, res) => {
   res.cookie("token", "").json(true);
 });
 
-console.log({ imageDownloader });
-console.log({ __dirname });
 app.post("/upload-by-link", async (req, res) => {
   const { link } = req.body;
   const newName = "photo" + Date.now() + ".jpg";
-  await imageDownloader.images({
+  const dest = path.join(__dirname, "uploads", newName);
+  await imageDownloader.image({
     url: link,
-    dest: __dirname + "/uploads" + newName,
+    dest: dest,
   });
   res.json(newName);
 });
+
+const uploadsDir = path.join(__dirname, "uploads");
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir);
+}
+
+// const photosMiddleware = multer({ dest: "uploads" });
+// app.post("/upload", photosMiddleware.array("photos", 100), (req, res) => {
+//   const uploadedFiles = [];
+//   for (let i = 0; i < req.files.length; i++) {
+//     const { path, originalname } = req.files[i];
+//     const parts = originalname.split(".");
+//     const ext = parts[parts.length - 1];
+//     const newPath = path + "." + ext;
+//     fs.renameSync(path, newPath);
+//     uploadedFiles.push(newPath.replace("uploads/", ""));
+//   }
+//   res.json(uploadedFiles);
+// });
+
+const photosMiddleware = multer({ dest: uploadsDir });
+app.post("/upload", photosMiddleware.array("photos", 100), (req, res) => {
+  const uploadedFiles = [];
+  try {
+    for (let i = 0; i < req.files.length; i++) {
+      const { path: tempPath, originalname } = req.files[i];
+      const ext = path.extname(originalname);
+      const newPath = tempPath + ext;
+      fs.renameSync(tempPath, newPath);
+      uploadedFiles.push(path.basename(newPath));
+    }
+    res.json(uploadedFiles);
+  } catch (error) {
+    console.error("Error processing files:", error);
+    res.status(500).json({ error: "File upload failed" });
+  }
+});
+
+// Serve static files from the uploads directory
+app.use("/uploads", express.static(uploadsDir));
 
 app.listen(4000);
