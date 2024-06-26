@@ -9,6 +9,7 @@ require("dotenv").config({ path: "./env" });
 const cookieParser = require("cookie-parser");
 const multer = require("multer");
 const fs = require("fs");
+const Place = require("./models/Place");
 
 const app = express();
 
@@ -136,5 +137,36 @@ app.post("/upload", photosMiddleware.array("photos", 100), (req, res) => {
 
 // Serve static files from the uploads directory
 app.use("/uploads", express.static(uploadsDir));
+
+app.post("/places", (req, res) => {
+  const { token } = req.cookies;
+  const {
+    title,
+    address,
+    addedPhotos,
+    description,
+    perks,
+    extraInfo,
+    checkIn,
+    checkOut,
+    maxGuests,
+  } = req.body;
+  jwt.verify(token, jwtSecret, {}, async (err, userData) => {
+    if (err) throw err;
+    const placeDoc = await Place.create({
+      owner: userData.id,
+      title,
+      address,
+      addedPhotos,
+      description,
+      perks,
+      extraInfo,
+      checkIn,
+      checkOut,
+      maxGuests,
+    });
+    res.json(playDoc);
+  });
+});
 
 app.listen(4000);
